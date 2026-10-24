@@ -1,0 +1,49 @@
+name: Deploy to GitHub Pages
+
+# 推送到 main 时自动部署，也可以在 GitHub 的 Actions 页面手动运行。
+"on":
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+# GITHUB_TOKEN 由 GitHub 自动提供，无需手动创建或保存密钥。
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: github-pages
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+
+      - name: Configure GitHub Pages
+        uses: actions/configure-pages@v5
+
+      # 只把网页放进发布目录，避免把整个仓库作为网站上传。
+      - name: Prepare static site
+        run: |
+          mkdir -p _site
+          cp index.html _site/index.html
+
+      - name: Upload site artifact
+        uses: actions/upload-pages-artifact@v4
+        with:
+          path: _site
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v5
